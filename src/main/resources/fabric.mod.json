@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "smooth_progression",
+  "version": "${version}",
+  "name": "Smooth Progression",
+  "description": "for my modpack Smooth Odyssey",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/smooth_progression/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "org.marj4n.smooth_progression.client.SmoothProgressionDataGenerator"
+    ],
+    "client": [
+      "org.marj4n.smooth_progression.client.SmoothProgressionClient"
+    ],
+    "main": [
+      "org.marj4n.smooth_progression.SmoothProgression"
+    ]
+  },
+  "mixins": [
+    "smooth_progression.mixins.json",
+    {
+      "config": "smooth_progression.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
