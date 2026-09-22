@@ -1,6 +1,7 @@
 package org.marj4n.smooth_progression.progression;
 
 import net.minecraft.server.network.ServerPlayerEntity;
+import org.marj4n.smooth_progression.network.ProgressionSync;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
 
@@ -42,6 +43,7 @@ public final class ProgressionManager {
     ) {
 
         getState(player).markProgressionDirty();
+        ProgressionSync.request(player);
     }
 
     public static void remove(
@@ -49,5 +51,6 @@ public final class ProgressionManager {
     ) {
 
         getState(player).remove(player);
+        ProgressionSync.request(player);
     }
 }
