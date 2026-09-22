@@ -6,8 +6,10 @@ import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 
+import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.progression.ExperienceApi;
 import org.marj4n.smooth_progression.progression.XpSource;
 
@@ -25,6 +27,7 @@ public final class MobExperience {
             );
 
     private static final double XP_PER_LEVEL = 0.01D;
+
     private static final double MAX_XP_MULTIPLIER = 3.0D;
 
     private MobExperience() {
@@ -40,6 +43,13 @@ public final class MobExperience {
     ) {
 
         if (victim == null || damageSource == null) {
+            return;
+        }
+
+        // Disable all Smooth Progression mob XP when disabled.
+        MobScalingConfig config = MobScalingConfig.get();
+
+        if (!config.enabled) {
             return;
         }
 
@@ -81,9 +91,16 @@ public final class MobExperience {
     // =========================================================
     // EXPERIENCE CALCULATION
     //
-    // XP = Base Max Health / 2 * Level Multiplier
+    // Normal mob:
+    // Base Max Health / 2 * Level Multiplier
     //
-    // Non-scaled mobs retain their original XP behavior.
+    // Boss:
+    // Base Max Health / 2
+    //
+    // Blacklisted / excluded mobs:
+    // Base Max Health / 2
+    //
+    // Spawner penalty is handled in onMobKilled().
     // =========================================================
 
     public static long calculateExperience(
@@ -91,6 +108,12 @@ public final class MobExperience {
     ) {
 
         if (entity == null) {
+            return 0L;
+        }
+
+        MobScalingConfig config = MobScalingConfig.get();
+
+        if (!config.enabled) {
             return 0L;
         }
 
@@ -102,28 +125,33 @@ public final class MobExperience {
             return 0L;
         }
 
-        int level = getMobLevel(entity);
+        // Remove our HP modifier if present.
+        // This prevents scaled HP from inflating XP.
+        double baseHealth = getHealthBeforeScaling(
+                entity,
+                maxHealth
+        );
 
-        // Only mobs with an assigned progression level
-        // receive the level-based reward.
-        if (level > 0) {
+        double calculated = baseHealth / 2.0D;
 
-            maxHealth = getHealthBeforeScaling(
-                    entity,
-                    maxHealth
-            );
-        }
+        // Only eligible mobs receive level-based bonus XP.
+        if (isEligibleForLevelBonus(entity, config)) {
 
-        double calculated = maxHealth / 2.0D;
+            int level = getMobLevel(entity);
 
-        if (level > 0) {
+            if (level > 0) {
 
-            double multiplier = Math.min(
-                    MAX_XP_MULTIPLIER,
-                    1.0D + XP_PER_LEVEL * (level - 1)
-            );
+                double multiplier = Math.min(
+                        MAX_XP_MULTIPLIER,
+                        1.0D + XP_PER_LEVEL * (level - 1)
+                );
 
-            calculated *= multiplier;
+                if (Double.isFinite(multiplier)
+                        && multiplier > 0.0D) {
+
+                    calculated *= multiplier;
+                }
+            }
         }
 
         if (!Double.isFinite(calculated)
@@ -136,6 +164,51 @@ public final class MobExperience {
                 1L,
                 Math.round(calculated)
         );
+    }
+
+    // =========================================================
+    // LEVEL BONUS ELIGIBILITY
+    // =========================================================
+
+    private static boolean isEligibleForLevelBonus(
+            LivingEntity entity,
+            MobScalingConfig config
+    ) {
+
+        String entityId = Registries.ENTITY_TYPE
+                .getId(entity.getType())
+                .toString();
+
+        // Bosses retain normal HP-based XP,
+        // but receive no mob-level XP multiplier.
+        if (config.bosses.entities.contains(entityId)) {
+            return false;
+        }
+
+        // Blacklisted mobs retain normal HP-based XP.
+        if (config.entities.blacklist.contains(entityId)) {
+            return false;
+        }
+
+        // Whitelist mode:
+        // Non-whitelisted mobs retain normal HP-based XP.
+        if (config.entities.mode.equals("whitelist")
+                && !config.entities.whitelist.contains(entityId)) {
+
+            return false;
+        }
+
+        // Disabled or unconfigured dimensions:
+        // Normal HP-based XP only.
+        String dimensionId = entity.getWorld()
+                .getRegistryKey()
+                .getValue()
+                .toString();
+
+        MobScalingConfig.Dimension dimension =
+                config.dimensions.get(dimensionId);
+
+        return dimension != null && dimension.enabled;
     }
 
     // =========================================================
@@ -165,7 +238,8 @@ public final class MobExperience {
                 }
 
             } catch (NumberFormatException ignored) {
-                // Ignore invalid level tags.
+
+                // Ignore malformed level tags.
             }
         }
 
@@ -179,7 +253,7 @@ public final class MobExperience {
     //
     // scaledHealth = previousHealth * (1 + modifierValue)
     //
-    // This reverses only our modifier.
+    // Reverse only our modifier.
     // =========================================================
 
     private static double getHealthBeforeScaling(
