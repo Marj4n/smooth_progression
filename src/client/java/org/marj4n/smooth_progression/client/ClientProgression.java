@@ -1,10 +1,17 @@
 package org.marj4n.smooth_progression.client;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.toast.SystemToast;
-import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
+import net.minecraft.advancement.Advancement;
+import net.minecraft.advancement.AdvancementFrame;
+import net.minecraft.advancement.criterion.ImpossibleCriterion;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.toast.AdvancementToast;
+import net.minecraft.item.Items;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import org.marj4n.smooth_progression.network.ProgressionSync;
 
@@ -27,12 +34,11 @@ public final class ClientProgression implements ClientModInitializer {
                     boolean incomingMax = buf.readBoolean();
 
                     client.execute(() -> {
+
                         if (received && incomingLevel > level) {
-                            SystemToast.add(client.getToastManager(),
-                                    SystemToast.Type.PERIODIC_NOTIFICATION,
-                                    Text.literal("Level Up!"),
-                                    Text.literal("Level " + incomingLevel));
+                            showLevelUpToast(client, incomingLevel);
                         }
+
                         level = incomingLevel;
                         xp = incomingXp;
                         max = incomingMax;
@@ -45,6 +51,38 @@ public final class ClientProgression implements ClientModInitializer {
                 (handler, client) -> client.execute(
                         ClientProgression::reset
                 )
+        );
+    }
+
+    private static void showLevelUpToast(
+            MinecraftClient client,
+            int newLevel
+    ) {
+
+        Advancement advancement = Advancement.Builder.create()
+                .display(
+                        Items.EXPERIENCE_BOTTLE,
+                        Text.literal("Level " + newLevel + " Reached!"),
+                        Text.literal("Your adventure continues."),
+                        null,
+                        AdvancementFrame.CHALLENGE,
+                        true,
+                        false,
+                        false
+                )
+                .criterion(
+                        "level_up",
+                        new ImpossibleCriterion.Conditions()
+                )
+                .build(
+                        new Identifier(
+                                "smooth_progression",
+                                "level_up_toast"
+                        )
+                );
+
+        client.getToastManager().add(
+                new AdvancementToast(advancement)
         );
     }
 
