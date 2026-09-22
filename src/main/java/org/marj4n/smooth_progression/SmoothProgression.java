@@ -5,7 +5,9 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 
 import org.marj4n.smooth_progression.combat.MobExperience;
 import org.marj4n.smooth_progression.command.ProgressionCommands;
+import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.network.ProgressionSync;
+import org.marj4n.smooth_progression.entity.MobLevelScaling;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,8 @@ public class SmoothProgression implements ModInitializer {
 
         ProgressionCommands.register();
         ProgressionSync.register();
+        MobScalingConfig.load();
+        MobLevelScaling.register();
 
         // =====================================================
         // MOB EXPERIENCE
