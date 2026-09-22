@@ -3,41 +3,25 @@ package org.marj4n.smooth_progression.progression;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
-import org.marj4n.smooth_progression.integration.PufferfishSkillsIntegration;
+import net.puffish.skillsmod.api.Category;
 
-import java.math.BigInteger;
+import org.marj4n.smooth_progression.integration.PufferfishSkillsIntegration;
+import org.marj4n.smooth_progression.integration.PufferfishSkillsIntegration.Destination;
+import org.marj4n.smooth_progression.integration.PufferfishSkillsIntegration.Stage;
 
 public final class LevelManager {
 
-    // =========================================================
-    // CONFIGURATION
-    // =========================================================
-
     public static final int MAX_ADMIN_LEVEL_GAIN = 10_000;
 
-    private static final BigInteger BIG_ZERO =
-            BigInteger.ZERO;
-
-    private static final BigInteger BIG_ONE =
-            BigInteger.ONE;
-
-    private static final BigInteger BIG_TWO =
-            BigInteger.valueOf(2L);
-
-    private static final BigInteger BIG_FIVE =
-            BigInteger.valueOf(5L);
-
-    private static final BigInteger BIG_SIX =
-            BigInteger.valueOf(6L);
-
-    private static final BigInteger BIG_HUNDRED =
-            BigInteger.valueOf(100L);
+    // Safety limit for processing one XP event.
+    // Remaining XP stays stored for the next event.
+    private static final int MAX_LEVELS_PER_EVENT = 10_000;
 
     private LevelManager() {
     }
 
     // =========================================================
-    // ADD EXPERIENCE
+    // ADD XP
     // =========================================================
 
     public static void addExperience(
@@ -49,14 +33,18 @@ public final class LevelManager {
             return;
         }
 
+        // MAX means no more XP, points or level-up messages.
+        if (PufferfishSkillsIntegration.isMaxLevel(player)) {
+            return;
+        }
+
         ProgressionState state =
                 ProgressionManager.getState(player);
 
         PlayerProgression progression =
                 state.getOrCreate(player);
 
-        long currentXp =
-                progression.getExperience();
+        long currentXp = progression.getExperience();
 
         long newXp =
                 amount > Long.MAX_VALUE - currentXp
@@ -72,7 +60,7 @@ public final class LevelManager {
     }
 
     // =========================================================
-    // SET EXPERIENCE
+    // SET XP
     // =========================================================
 
     public static void setExperience(
@@ -81,6 +69,10 @@ public final class LevelManager {
     ) {
 
         if (player == null || amount < 0L) {
+            return;
+        }
+
+        if (PufferfishSkillsIntegration.isMaxLevel(player)) {
             return;
         }
 
@@ -99,7 +91,7 @@ public final class LevelManager {
     }
 
     // =========================================================
-    // APPLY EXPERIENCE
+    // APPLY XP
     // =========================================================
 
     private static void applyExperience(
@@ -109,76 +101,119 @@ public final class LevelManager {
             long newExperience
     ) {
 
-        int startingLevel =
-                progression.getLevel();
+        progression.setExperience(newExperience);
+        state.markProgressionDirty();
 
-        BigInteger availableExperience =
-                BigInteger.valueOf(newExperience);
+        for (int iteration = 0;
+             iteration < MAX_LEVELS_PER_EVENT;
+             iteration++) {
 
-        int targetLevel =
-                findTargetLevel(
-                        startingLevel,
-                        availableExperience
+            Destination destination =
+                    PufferfishSkillsIntegration
+                            .resolveDestination(player);
+
+            // =================================================
+            // MAX LEVEL
+            // =================================================
+
+            if (destination.stage() == Stage.MAX_LEVEL) {
+
+                // Clear leftover XP once progression is complete.
+                progression.setExperience(0L);
+                state.markProgressionDirty();
+
+                // Intentionally silent.
+                return;
+            }
+
+            // =================================================
+            // MISSING / INVALID STAGE
+            // =================================================
+
+            if (destination.category().isEmpty()) {
+
+                sendStageMessage(
+                        player,
+                        destination.stage()
                 );
 
-        long gainedLevels =
-                (long) targetLevel - startingLevel;
+                // XP remains pending.
+                return;
+            }
 
-        // Calculate skill points using long first.
-        long pointsLong =
-                gainedLevels
-                        * PufferfishSkillsIntegration.POINTS_PER_LEVEL;
+            Category category =
+                    destination.category().get();
 
-        // Never allow int overflow.
-        if (pointsLong > Integer.MAX_VALUE) {
+            // =================================================
+            // SPEND AVAILABLE POINTS FIRST
+            // =================================================
 
-            sendError(
+            if (PufferfishSkillsIntegration.hasAffordableSkill(
+                    category,
+                    player
+            )) {
+
+                sendError(
+                        player,
+                        "Level up locked! Spend your available "
+                                + "skill points in "
+                                + category.getId()
+                                + " first."
+                );
+
+                // XP remains pending.
+                return;
+            }
+
+            int currentLevel = progression.getLevel();
+
+            if (currentLevel >= Integer.MAX_VALUE) {
+                return;
+            }
+
+            long requiredXp =
+                    ExperienceManager.getRequiredExperience(
+                            currentLevel
+                    );
+
+            // =================================================
+            // NOT ENOUGH XP
+            // =================================================
+
+            if (progression.getExperience() < requiredXp) {
+                return;
+            }
+
+            // =================================================
+            // VALIDATE EXACTLY ONE LEVEL'S REWARD
+            // =================================================
+
+            int points =
+                    PufferfishSkillsIntegration.POINTS_PER_LEVEL;
+
+            if (!PufferfishSkillsIntegration.canAwardSkillPoints(
                     player,
-                    "Skill point reward exceeds integer limit."
-            );
+                    currentLevel,
+                    points
+            )) {
 
-            return;
-        }
-
-        int points = (int) pointsLong;
-
-        // Validate before changing XP or level.
-        if (gainedLevels > 0
-                && !PufferfishSkillsIntegration
-                .canAwardSkillPoints(player, points)) {
-
-            sendError(
-                    player,
-                    "Unable to award skill points. "
-                            + "Check SimplySkills Tree."
-            );
-
-            return;
-        }
-
-        // Total XP spent to reach targetLevel.
-        BigInteger spentExperience =
-                getExperienceBetweenLevels(
-                        startingLevel,
-                        targetLevel
+                sendError(
+                        player,
+                        "Unable to award skill points to "
+                                + category.getId()
                 );
 
-        BigInteger remainingExperience =
-                availableExperience.subtract(
-                        spentExperience
-                );
+                return;
+            }
 
-        // The remaining XP cannot exceed the supplied
-        // long value because spentExperience is nonnegative.
-        long remainingXp =
-                remainingExperience.longValueExact();
-
-        // Award all skill points in one operation.
-        if (gainedLevels > 0) {
+            // =================================================
+            // AWARD POINTS BEFORE CHANGING LEVEL
+            // =================================================
 
             boolean awarded =
                     PufferfishSkillsIntegration.addSkillPoints(
                             player,
+                            currentLevel,
                             points
                     );
 
@@ -186,174 +221,69 @@ public final class LevelManager {
 
                 sendError(
                         player,
-                        "Skill point award failed. "
-                                + "Level was not changed."
+                        "Skill point reward failed."
                 );
 
                 return;
             }
-        }
 
-        // Apply progression only after reward succeeds.
-        progression.setLevel(targetLevel);
+            // =================================================
+            // APPLY EXACTLY ONE LEVEL
+            // =================================================
 
-        progression.setExperience(remainingXp);
-
-        state.markProgressionDirty();
-
-        if (gainedLevels > 0) {
-
-            player.sendMessage(
-                    Text.literal(
-                            "§aLevel Up! §f"
-                                    + startingLevel
-                                    + " §7→ §a"
-                                    + targetLevel
-                                    + "\n§eLevels gained: §f"
-                                    + gainedLevels
-                                    + "\n§eSkill points awarded: §f"
-                                    + points
-                    ),
-                    false
+            progression.setExperience(
+                    progression.getExperience() - requiredXp
             );
+
+            progression.setLevel(currentLevel + 1);
+
+            state.markProgressionDirty();
+
+            sendLevelUp(
+                    player,
+                    currentLevel,
+                    currentLevel + 1,
+                    points,
+                    category
+            );
+
+            // Next loop rechecks:
+            // - current category
+            // - affordable skills
+            // - class completion
+            // - Ascendancy completion
+            // - MAX LEVEL
         }
     }
 
-    // =========================================================
-    // FIND TARGET LEVEL
-    //
-    // Binary search:
-    // O(log Integer.MAX_VALUE)
-    //
-    // Does not loop once per level.
-    // =========================================================
-
-    private static int findTargetLevel(
-            int startingLevel,
-            BigInteger availableExperience
-    ) {
-
-        if (startingLevel >= Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
+    // Admin-only test operation: grant levels and points to the CURRENT stage.
+    // Does not bypass the General Tree -> class -> Ascendancy order.
+    // Use on a backup world; these are real persistent skill points.
+    public static int debugAddLevels(ServerPlayerEntity player, int amount) {
+        if (player == null || amount <= 0 || amount > MAX_ADMIN_LEVEL_GAIN) return 0;
+        ProgressionState state = ProgressionManager.getState(player);
+        PlayerProgression progression = state.getOrCreate(player);
+        int gained = 0;
+        for (int i = 0; i < amount; i++) {
+            Destination destination = PufferfishSkillsIntegration.resolveDestination(player);
+            if (destination.category().isEmpty() || progression.getLevel() >= Integer.MAX_VALUE) break;
+            int currentLevel = progression.getLevel();
+            if (!PufferfishSkillsIntegration.addSkillPoints(player, currentLevel,
+                    PufferfishSkillsIntegration.POINTS_PER_LEVEL)) break;
+            progression.setLevel(currentLevel + 1);
+            state.markProgressionDirty();
+            gained++;
         }
-
-        long low = startingLevel;
-
-        long high = Integer.MAX_VALUE;
-
-        while (low < high) {
-
-            long middle =
-                    low + (high - low + 1L) / 2L;
-
-            BigInteger required =
-                    getExperienceBetweenLevels(
-                            startingLevel,
-                            (int) middle
-                    );
-
-            if (required.compareTo(
-                    availableExperience
-            ) <= 0) {
-
-                low = middle;
-
-            } else {
-
-                high = middle - 1L;
-            }
-        }
-
-        return (int) low;
+        return gained;
     }
 
     // =========================================================
-    // CUMULATIVE EXPERIENCE
+    // ADMIN: SET LEVEL
     //
-    // XP(level) = 100 + 5 * level^2
-    //
-    // Sum from startLevel to endLevel - 1.
-    //
-    // Example:
-    //
-    // getExperienceBetweenLevels(1, 3)
-    //
-    // = XP(1) + XP(2)
-    // = 105 + 120
-    // = 225
+    // Does not bypass skill gates.
+    // Does not award a batch to one category.
     // =========================================================
 
-    private static BigInteger getExperienceBetweenLevels(
-            int startLevel,
-            int endLevel
-    ) {
-
-        if (endLevel <= startLevel) {
-            return BIG_ZERO;
-        }
-
-        BigInteger start =
-                BigInteger.valueOf(startLevel);
-
-        BigInteger end =
-                BigInteger.valueOf(endLevel);
-
-        BigInteger levelCount =
-                end.subtract(start);
-
-        BigInteger baseExperience =
-                BIG_HUNDRED.multiply(levelCount);
-
-        BigInteger squaredSum =
-                sumOfSquares(
-                        end.subtract(BIG_ONE)
-                ).subtract(
-                        sumOfSquares(
-                                start.subtract(BIG_ONE)
-                        )
-                );
-
-        return baseExperience.add(
-                BIG_FIVE.multiply(squaredSum)
-        );
-    }
-
-    // =========================================================
-    // SUM OF SQUARES
-    //
-    // 1^2 + 2^2 + ... + n^2
-    //
-    // = n(n + 1)(2n + 1) / 6
-    // =========================================================
-
-    private static BigInteger sumOfSquares(
-            BigInteger n
-    ) {
-
-        if (n.signum() <= 0) {
-            return BIG_ZERO;
-        }
-
-        return n.multiply(
-                n.add(BIG_ONE)
-        ).multiply(
-                n.multiply(BIG_TWO).add(BIG_ONE)
-        ).divide(
-                BIG_SIX
-        );
-    }
-
-    // =========================================================
-    // SET LEVEL
-    // =========================================================
-
-    /**
-     * Increase level directly and award skill points.
-     *
-     * Returns the actual number of levels gained.
-     *
-     * Lowering the level is intentionally not supported.
-     */
     public static int setLevel(
             ServerPlayerEntity player,
             int targetLevel
@@ -369,75 +299,103 @@ public final class LevelManager {
         PlayerProgression progression =
                 state.getOrCreate(player);
 
-        int currentLevel =
-                progression.getLevel();
+        int startingLevel = progression.getLevel();
 
-        if (targetLevel <= currentLevel) {
+        if (targetLevel <= startingLevel) {
             return 0;
         }
 
-        long difference =
-                (long) targetLevel - currentLevel;
+        long requestedGain =
+                (long) targetLevel - startingLevel;
 
-        if (difference > MAX_ADMIN_LEVEL_GAIN) {
+        if (requestedGain > MAX_ADMIN_LEVEL_GAIN) {
             return 0;
         }
 
-        int gainedLevels =
-                (int) difference;
+        int gained = 0;
 
-        long pointsLong =
-                difference
-                        * PufferfishSkillsIntegration.POINTS_PER_LEVEL;
+        while (progression.getLevel() < targetLevel) {
 
-        if (pointsLong > Integer.MAX_VALUE) {
+            Destination destination =
+                    PufferfishSkillsIntegration
+                            .resolveDestination(player);
 
-            sendError(
+            if (destination.stage() == Stage.MAX_LEVEL) {
+                break;
+            }
+
+            if (destination.category().isEmpty()) {
+
+                sendStageMessage(
+                        player,
+                        destination.stage()
+                );
+
+                break;
+            }
+
+            Category category =
+                    destination.category().get();
+
+            if (PufferfishSkillsIntegration.hasAffordableSkill(
+                    category,
+                    player
+            )) {
+
+                sendError(
+                        player,
+                        "Spend your available skill points in "
+                                + category.getId()
+                                + " before adding more levels."
+                );
+
+                break;
+            }
+
+            int currentLevel = progression.getLevel();
+
+            if (currentLevel >= Integer.MAX_VALUE) {
+                break;
+            }
+
+            boolean awarded =
+                    PufferfishSkillsIntegration.addSkillPoints(
+                            player,
+                            currentLevel,
+                            PufferfishSkillsIntegration.POINTS_PER_LEVEL
+                    );
+
+            if (!awarded) {
+
+                sendError(
+                        player,
+                        "Could not award skill points."
+                );
+
+                break;
+            }
+
+            progression.setLevel(currentLevel + 1);
+
+            // Preserve pending XP instead of silently deleting it.
+            state.markProgressionDirty();
+
+            gained++;
+
+            sendLevelUp(
                     player,
-                    "Skill point reward exceeds integer limit."
+                    currentLevel,
+                    currentLevel + 1,
+                    PufferfishSkillsIntegration.POINTS_PER_LEVEL,
+                    category
             );
-
-            return 0;
         }
 
-        int points = (int) pointsLong;
-
-        // Do not change level if the reward cannot be given.
-        if (!PufferfishSkillsIntegration
-                .addSkillPoints(player, points)) {
-
-            sendError(
-                    player,
-                    "Unable to award skill points. "
-                            + "Level was not changed."
-            );
-
-            return 0;
-        }
-
-        progression.setLevel(targetLevel);
-
-        progression.setExperience(0L);
-
-        state.markProgressionDirty();
-
-        player.sendMessage(
-                Text.literal(
-                        "§aLevel Up! §f"
-                                + currentLevel
-                                + " §7→ §a"
-                                + targetLevel
-                                + "\n§eSkill points awarded: §f"
-                                + points
-                ),
-                false
-        );
-
-        return gainedLevels;
+        return gained;
     }
 
     // =========================================================
-    // ADD LEVEL
+    // ADMIN: ADD LEVEL
     // =========================================================
 
     public static int addLevel(
@@ -445,19 +403,15 @@ public final class LevelManager {
             int amount
     ) {
 
-        if (player == null || amount <= 0) {
+        if (player == null
+                || amount <= 0
+                || amount > MAX_ADMIN_LEVEL_GAIN) {
+
             return 0;
         }
-
-        if (amount > MAX_ADMIN_LEVEL_GAIN) {
-            return 0;
-        }
-
-        PlayerProgression progression =
-                ProgressionManager.get(player);
 
         int currentLevel =
-                progression.getLevel();
+                ProgressionManager.get(player).getLevel();
 
         if (amount > Integer.MAX_VALUE - currentLevel) {
             return 0;
@@ -466,6 +420,73 @@ public final class LevelManager {
         return setLevel(
                 player,
                 currentLevel + amount
+        );
+    }
+
+    // =========================================================
+    // STAGE MESSAGES
+    // =========================================================
+
+    private static void sendStageMessage(
+            ServerPlayerEntity player,
+            Stage stage
+    ) {
+
+        switch (stage) {
+
+            case WAITING_FOR_CLASS -> sendError(
+                    player,
+                    "General Tree complete! Select a class "
+                            + "to continue leveling."
+            );
+
+            case INVALID_CLASS_SELECTION -> sendError(
+                    player,
+                    "Multiple classes are unlocked. "
+                            + "Exactly one class must be selected."
+            );
+
+            case WAITING_FOR_ASCENDANCY -> sendError(
+                    player,
+                    "Class complete! Unlock Ascendancy "
+                            + "to continue leveling."
+            );
+
+            case UNAVAILABLE -> sendError(
+                    player,
+                    "Skill category is unavailable."
+            );
+
+            default -> {
+                // No message for MAX_LEVEL.
+            }
+        }
+    }
+
+    // =========================================================
+    // LEVEL-UP MESSAGE
+    // =========================================================
+
+    private static void sendLevelUp(
+            ServerPlayerEntity player,
+            int oldLevel,
+            int newLevel,
+            int points,
+            Category category
+    ) {
+
+        player.sendMessage(
+                Text.literal(
+                        "\u00A7aLevel Up! \u00A7f"
+                                + oldLevel
+                                + " \u00A77-> \u00A7a"
+                                + newLevel
+                                + "\n\u00A7eSkill points awarded: \u00A7f"
+                                + points
+                                + "\n\u00A7eCategory: \u00A7f"
+                                + category.getId()
+                ),
+                false
         );
     }
 
@@ -480,7 +501,7 @@ public final class LevelManager {
 
         player.sendMessage(
                 Text.literal(
-                        "§cSmooth Progression: §f"
+                        "\u00A7cSmooth Progression: \u00A7f"
                                 + message
                 ),
                 false

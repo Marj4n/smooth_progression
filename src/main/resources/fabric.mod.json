@@ -14,7 +14,7 @@
       "org.marj4n.smooth_progression.client.SmoothProgressionDataGenerator"
     ],
     "client": [
-      "org.marj4n.smooth_progression.client.SmoothProgressionClient"
+      "org.marj4n.smooth_progression.client.ClientProgression"
     ],
     "main": [
       "org.marj4n.smooth_progression.SmoothProgression"

@@ -1,6 +1,7 @@
 package org.marj4n.smooth_progression.integration;
 
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import net.puffish.skillsmod.api.Category;
@@ -41,7 +42,6 @@ public final class SimplySkillsIntegration {
         // Reset purchased skills first so their rewards
         // and skill-lock events are processed.
         for (Category category : categories) {
-
             category.resetSkills(player);
         }
 
@@ -49,7 +49,6 @@ public final class SimplySkillsIntegration {
         // Erase category data, including XP and points.
         // This also triggers a category UI update.
         for (Category category : categories) {
-
             category.erase(player);
         }
 
@@ -70,5 +69,68 @@ public final class SimplySkillsIntegration {
                 .ifPresent(category ->
                         category.unlock(player)
                 );
+    }
+
+    // =========================================================
+    // DEBUG SIMPLYSKILLS CATEGORIES
+    // =========================================================
+
+    public static void debugUnlockedCategories(
+            ServerPlayerEntity player
+    ) {
+
+        if (player == null) {
+            return;
+        }
+
+        player.sendMessage(
+                Text.literal(
+                        "§6=== SimplySkills Categories ==="
+                ),
+                false
+        );
+
+        SkillsAPI.streamCategories()
+                .filter(category ->
+                        category.getId()
+                                .getNamespace()
+                                .equals("simplyskills")
+                )
+                .forEach(category -> {
+
+                    String categoryId =
+                            category.getId().toString();
+
+                    boolean unlocked =
+                            category.isUnlocked(player);
+
+                    int spent =
+                            category.getSpentPoints(player);
+
+                    int pointsLeft =
+                            category.getPointsLeft(player);
+
+                    int pointsTotal =
+                            category.getPointsTotal(player);
+
+                    String statusColor =
+                            unlocked ? "§a" : "§c";
+
+                    player.sendMessage(
+                            Text.literal(
+                                    "§e" + categoryId
+                                            + "\n§7Unlocked: "
+                                            + statusColor
+                                            + unlocked
+                                            + " §7| Spent: §f"
+                                            + spent
+                                            + " §7| Left: §f"
+                                            + pointsLeft
+                                            + " §7| Total: §f"
+                                            + pointsTotal
+                            ),
+                            false
+                    );
+                });
     }
 }

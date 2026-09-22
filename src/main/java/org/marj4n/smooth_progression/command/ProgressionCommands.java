@@ -39,6 +39,28 @@ public final class ProgressionCommands {
                                             showHelp(context.getSource())
                                     )
 
+                                    // DEBUG SKILLS
+                                    .then(
+                                            CommandManager.literal("debugskills")
+                                                    .requires(source ->
+                                                            source.hasPermissionLevel(2)
+                                                    )
+                                                    .executes(context ->
+                                                            debugSkills(
+                                                                    context.getSource()
+                                                            )
+                                                    )
+                                    )
+
+                                    // /sp debuglevel add <amount>: grant test levels without spend gate.
+                                    .then(CommandManager.literal("debuglevel")
+                                            .requires(source -> source.hasPermissionLevel(2))
+                                            .then(CommandManager.literal("add")
+                                                    .then(CommandManager.argument("amount", IntegerArgumentType.integer(1, 10000))
+                                                            .executes(context -> debugAddLevels(
+                                                                    context.getSource(),
+                                                                    IntegerArgumentType.getInteger(context, "amount"))))))
+
                                     // LEVEL
                                     .then(
                                             CommandManager.literal("level")
@@ -195,13 +217,41 @@ public final class ProgressionCommands {
                                     + "§e/sp xp set <amount>\n"
                                     + "§e/sp level set <level>\n"
                                     + "§e/sp level add <amount>\n"
-                                    + "§e/sp level reset"
+                                    + "§e/sp level reset\n"
+                                    + "§e/sp debuglevel add <amount> §7- Test levels (bypass spend gate)\n"
+                                    + "§e/sp debugskills §7- Debug skill categories"
                     ),
                     false
             );
         }
 
         return 1;
+    }
+
+    // =========================================================
+    // DEBUG SKILLS
+    // =========================================================
+
+    private static int debugSkills(
+            ServerCommandSource source
+    ) throws CommandSyntaxException {
+
+        ServerPlayerEntity player =
+                source.getPlayerOrThrow();
+
+        SimplySkillsIntegration.debugUnlockedCategories(player);
+
+        return 1;
+    }
+
+    private static int debugAddLevels(ServerCommandSource source, int amount)
+            throws CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        int gained = LevelManager.debugAddLevels(player, amount);
+        source.sendFeedback(() -> Text.literal("§eDebug: +" + gained
+                + " levels, +" + (gained * 2) + " points to active stage. "
+                + "Level: " + ProgressionManager.get(player).getLevel()), false);
+        return gained > 0 ? 1 : 0;
     }
 
     // =========================================================
@@ -373,10 +423,21 @@ public final class ProgressionCommands {
         int gained =
                 LevelManager.setLevel(player, level);
 
+        if (gained <= 0) {
+
+            source.sendError(
+                    Text.literal(
+                            "Could not set level. Check progression limits."
+                    )
+            );
+
+            return 0;
+        }
+
         source.sendFeedback(
                 () -> Text.literal(
                         "§aLevel set to "
-                                + level
+                                + ProgressionManager.get(player).getLevel()
                                 + ".\n§eLevels gained: §f"
                                 + gained
                                 + "\n§eSkill points awarded: §f"
