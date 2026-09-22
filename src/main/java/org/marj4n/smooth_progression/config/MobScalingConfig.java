@@ -38,7 +38,6 @@ public final class MobScalingConfig {
     public Scaling scaling = new Scaling();
     public Elite elite = new Elite();
     public Entities entities = new Entities();
-    public Bosses bosses = new Bosses();
 
     public MobScalingConfig() {
 
@@ -134,8 +133,7 @@ public final class MobScalingConfig {
                 || level_curve == null
                 || scaling == null
                 || elite == null
-                || entities == null
-                || bosses == null) {
+                || entities == null) {
 
             throw new IllegalArgumentException(
                     "Missing required config section"
@@ -182,8 +180,7 @@ public final class MobScalingConfig {
 
         if (entities.blacklist == null
                 || entities.whitelist == null
-                || entities.overrides == null
-                || bosses.entities == null) {
+                || entities.overrides == null) {
 
             throw new IllegalArgumentException(
                     "Entity lists cannot be null"
@@ -398,15 +395,4 @@ public final class MobScalingConfig {
         public boolean elite_enabled = true;
     }
 
-    public static final class Bosses {
-
-        public boolean enabled = true;
-
-        // Dedicated boss scaling is not implemented yet.
-        // These entities remain excluded.
-        public List<String> entities = List.of(
-                "minecraft:wither",
-                "minecraft:ender_dragon"
-        );
-    }
 }

@@ -2,6 +2,9 @@ package org.marj4n.smooth_progression.progression;
 
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import net.puffish.skillsmod.api.Category;
 
@@ -16,6 +19,8 @@ public final class LevelManager {
     // Safety limit for processing one XP event.
     // Remaining XP stays stored for the next event.
     private static final int MAX_LEVELS_PER_EVENT = 10_000;
+
+    private static final Set<UUID> REMINDED = new HashSet<>();
 
     private LevelManager() {
     }
@@ -153,18 +158,13 @@ public final class LevelManager {
                     player
             )) {
 
-                sendError(
-                        player,
-                        "Level up locked! Spend your available "
-                                + "skill points in "
-                                + category.getId()
-                                + " first."
-                );
+                remindSkillTree(player);
 
                 // XP remains pending.
                 return;
             }
 
+            REMINDED.remove(player.getUuid());
             int currentLevel = progression.getLevel();
 
             if (currentLevel >= Integer.MAX_VALUE) {
@@ -239,13 +239,7 @@ public final class LevelManager {
 
             ProgressionManager.markDirty(player);
 
-            sendLevelUp(
-                    player,
-                    currentLevel,
-                    currentLevel + 1,
-                    points,
-                    category
-            );
+            // Client displays one toast from the final synced level. No chat spam.
 
             // Next loop rechecks:
             // - current category
@@ -342,12 +336,7 @@ public final class LevelManager {
                     player
             )) {
 
-                sendError(
-                        player,
-                        "Spend your available skill points in "
-                                + category.getId()
-                                + " before adding more levels."
-                );
+                remindSkillTree(player);
 
                 break;
             }
@@ -382,13 +371,7 @@ public final class LevelManager {
 
             gained++;
 
-            sendLevelUp(
-                    player,
-                    currentLevel,
-                    currentLevel + 1,
-                    PufferfishSkillsIntegration.POINTS_PER_LEVEL,
-                    category
-            );
+            // Client displays one toast from the final synced level.
         }
 
         return gained;
@@ -463,31 +446,13 @@ public final class LevelManager {
         }
     }
 
-    // =========================================================
-    // LEVEL-UP MESSAGE
-    // =========================================================
-
-    private static void sendLevelUp(
-            ServerPlayerEntity player,
-            int oldLevel,
-            int newLevel,
-            int points,
-            Category category
-    ) {
-
-        player.sendMessage(
-                Text.literal(
-                        "\u00A7aLevel Up! \u00A7f"
-                                + oldLevel
-                                + " \u00A77-> \u00A7a"
-                                + newLevel
-                                + "\n\u00A7eSkill points awarded: \u00A7f"
-                                + points
-                                + "\n\u00A7eCategory: \u00A7f"
-                                + category.getId()
-                ),
-                false
-        );
+    // One reminder per locked period; rearmed after the gate clears.
+    private static void remindSkillTree(ServerPlayerEntity player) {
+        if (REMINDED.add(player.getUuid())) {
+            player.sendMessage(Text.literal(
+                    "Spend your available skill points in the Skill Tree to continue leveling."
+            ), false);
+        }
     }
 
     // =========================================================

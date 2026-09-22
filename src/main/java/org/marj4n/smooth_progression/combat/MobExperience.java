@@ -10,6 +10,8 @@ import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import org.marj4n.smooth_progression.config.MobScalingConfig;
+import org.marj4n.smooth_progression.config.BossScalingConfig;
+import org.marj4n.smooth_progression.boss.BossProgression;
 import org.marj4n.smooth_progression.progression.ExperienceApi;
 import org.marj4n.smooth_progression.progression.XpSource;
 
@@ -134,6 +136,19 @@ public final class MobExperience {
 
         double calculated = baseHealth / 2.0D;
 
+        BossScalingConfig.BossLevel boss = BossProgression.getBoss(entity);
+        if (boss != null) {
+            // Reverse boss HP modifier too: XP is based on original mod HP.
+            EntityAttributeInstance attribute = entity.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH);
+            EntityAttributeModifier modifier = attribute == null ? null : attribute.getModifier(BossProgression.HEALTH_MODIFIER_ID);
+            if (modifier != null && 1.0D + modifier.getValue() > 0.0D) {
+                calculated /= (1.0D + modifier.getValue());
+            }
+            BossScalingConfig settings = BossScalingConfig.get();
+            calculated *= Math.min(settings.max_xp_multiplier,
+                    1.0D + settings.xp_per_level * (boss.min_level - 1)) * boss.xp_multiplier;
+        }
+
         // Only eligible mobs receive level-based bonus XP.
         if (isEligibleForLevelBonus(entity, config)) {
 
@@ -181,7 +196,7 @@ public final class MobExperience {
 
         // Bosses retain normal HP-based XP,
         // but receive no mob-level XP multiplier.
-        if (config.bosses.entities.contains(entityId)) {
+        if (BossScalingConfig.get().contains(entityId)) {
             return false;
         }
 
