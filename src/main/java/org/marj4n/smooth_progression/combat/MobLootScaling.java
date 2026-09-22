@@ -5,6 +5,7 @@ import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.registry.Registries;
 
 import org.marj4n.smooth_progression.config.MobScalingConfig;
+import org.marj4n.smooth_progression.config.BossScalingConfig;
 
 public final class MobLootScaling {
 
@@ -51,7 +52,7 @@ public final class MobLootScaling {
             return false;
         }
 
-        if (config.bosses.entities.contains(id)) {
+        if (BossScalingConfig.get().contains(id)) {
             return false;
         }
 

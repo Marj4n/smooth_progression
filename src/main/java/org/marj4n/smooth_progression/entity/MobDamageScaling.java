@@ -8,6 +8,8 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.registry.Registries;
 
 import org.marj4n.smooth_progression.config.MobScalingConfig;
+import org.marj4n.smooth_progression.config.BossScalingConfig;
+import org.marj4n.smooth_progression.boss.BossGateManager;
 
 public final class MobDamageScaling {
 
@@ -38,6 +40,11 @@ public final class MobDamageScaling {
             return amount;
         }
 
+        // Boss gate handles both player -> boss and boss -> player.
+        // Bosses must not also receive normal mob damage scaling.
+        float gated = BossGateManager.scaleDamage(target, source, amount);
+        if (gated != amount) return gated;
+
         // Resolve melee attacker or projectile owner.
         Entity attacker = resolveAttacker(source);
 
@@ -65,7 +72,7 @@ public final class MobDamageScaling {
         }
 
         // Boss progression is handled separately in the future.
-        if (config.bosses.entities.contains(id)) {
+        if (BossScalingConfig.get().contains(id)) {
             return amount;
         }
 

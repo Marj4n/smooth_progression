@@ -11,6 +11,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 
 import org.marj4n.smooth_progression.config.MobScalingConfig;
+import org.marj4n.smooth_progression.config.BossScalingConfig;
 
 import java.util.List;
 import java.util.UUID;
@@ -111,7 +112,7 @@ public final class MobLevelScaling {
         }
 
         // Dedicated boss scaling is not implemented yet.
-        if (config.bosses.entities.contains(id)) {
+        if (BossScalingConfig.get().contains(id)) {
             return;
         }
 

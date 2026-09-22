@@ -1,6 +1,8 @@
 package org.marj4n.smooth_progression.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.toast.SystemToast;
+import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
@@ -25,6 +27,12 @@ public final class ClientProgression implements ClientModInitializer {
                     boolean incomingMax = buf.readBoolean();
 
                     client.execute(() -> {
+                        if (received && incomingLevel > level) {
+                            SystemToast.add(client.getToastManager(),
+                                    SystemToast.Type.PERIODIC_NOTIFICATION,
+                                    Text.literal("Level Up!"),
+                                    Text.literal("Level " + incomingLevel));
+                        }
                         level = incomingLevel;
                         xp = incomingXp;
                         max = incomingMax;
