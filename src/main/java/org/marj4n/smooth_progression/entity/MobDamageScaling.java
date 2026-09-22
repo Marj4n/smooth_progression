@@ -6,6 +6,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.registry.Registries;
+
 import org.marj4n.smooth_progression.config.MobScalingConfig;
 
 public final class MobDamageScaling {
@@ -13,7 +14,12 @@ public final class MobDamageScaling {
     private static final String LEVEL_PREFIX =
             "smoothprogression.level.";
 
-    private MobDamageScaling() {}
+    private MobDamageScaling() {
+    }
+
+    // =========================================================
+    // DAMAGE SCALING
+    // =========================================================
 
     public static float scaleDamage(
             LivingEntity target,
@@ -21,7 +27,8 @@ public final class MobDamageScaling {
             float amount
     ) {
 
-        if (amount <= 0.0f || !Float.isFinite(amount)) {
+        // Ignore invalid, zero, or negative damage.
+        if (amount <= 0.0F || !Float.isFinite(amount)) {
             return amount;
         }
 
@@ -31,10 +38,16 @@ public final class MobDamageScaling {
             return amount;
         }
 
+        // Resolve melee attacker or projectile owner.
         Entity attacker = resolveAttacker(source);
 
-        // Only hostile mobs are scaled.
-        // Players, pets, and other entities are not affected.
+        // Prevent scaling self-inflicted damage.
+        if (attacker == target) {
+            return amount;
+        }
+
+        // Only hostile mobs receive damage scaling.
+        // Players, pets, and environmental damage are excluded.
         if (!(attacker instanceof HostileEntity mob)) {
             return amount;
         }
@@ -43,10 +56,15 @@ public final class MobDamageScaling {
                 .getId(mob.getType())
                 .toString();
 
+        // =====================================================
+        // ENTITY FILTERS
+        // =====================================================
+
         if (config.entities.blacklist.contains(id)) {
             return amount;
         }
 
+        // Boss progression is handled separately in the future.
         if (config.bosses.entities.contains(id)) {
             return amount;
         }
@@ -57,62 +75,76 @@ public final class MobDamageScaling {
             return amount;
         }
 
-        // The mob must have received a Smooth Progression level.
+        // =====================================================
+        // LEVEL VALIDATION
+        // =====================================================
+
         int level = readLevel(mob);
 
+        // Unleveled mobs are not scaled.
         if (level < 1) {
             return amount;
         }
 
+        // =====================================================
+        // DAMAGE MULTIPLIER
+        // =====================================================
+
         double multiplier = Math.min(
                 config.scaling.max_damage_multiplier,
-                1.0 + config.scaling.damage_per_level
+                1.0D + config.scaling.damage_per_level
                         * (level - 1)
         );
 
         if (!Double.isFinite(multiplier)
-                || multiplier <= 1.0) {
+                || multiplier <= 1.0D) {
 
             return amount;
         }
 
-        double scaled = amount * multiplier;
+        double scaledDamage = amount * multiplier;
 
-        // Avoid returning infinity if another mod supplies
-        // an extremely large damage value.
-        if (!Double.isFinite(scaled)) {
+        // Protect against overflow from extremely high damage
+        // supplied by other mods.
+        if (!Double.isFinite(scaledDamage)) {
             return Float.MAX_VALUE;
         }
 
         return (float) Math.min(
                 Float.MAX_VALUE,
-                scaled
+                scaledDamage
         );
     }
+
+    // =========================================================
+    // RESOLVE ATTACKER
+    // =========================================================
 
     private static Entity resolveAttacker(
             DamageSource source
     ) {
 
-        // Vanilla DamageSource usually exposes the shooter
-        // as attacker for arrows and other indirect damage.
+        // Normal melee attacks and most indirect damage sources.
         Entity attacker = source.getAttacker();
 
         if (attacker != null) {
             return attacker;
         }
 
-        // Fallback for projectile sources where the attacker
-        // is not populated but the projectile has an owner.
+        // Fallback for projectiles without an attacker entry.
         Entity directSource = source.getSource();
 
         if (directSource instanceof ProjectileEntity projectile) {
-
             return projectile.getOwner();
         }
 
+        // Allows direct hostile-entity damage sources.
         return directSource;
     }
+
+    // =========================================================
+    // READ MOB LEVEL
+    // =========================================================
 
     private static int readLevel(
             Entity entity
