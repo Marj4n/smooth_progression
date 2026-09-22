@@ -19,7 +19,10 @@ public class ProgressionState extends PersistentState {
 
         return progressions.computeIfAbsent(
                 player.getUuid(),
-                uuid -> new PlayerProgression()
+                uuid -> {
+                    markDirty();
+                    return new PlayerProgression();
+                }
         );
     }
 
@@ -31,9 +34,7 @@ public class ProgressionState extends PersistentState {
             ServerPlayerEntity player
     ) {
 
-        progressions.remove(
-                player.getUuid()
-        );
+        progressions.remove(player.getUuid());
 
         markDirty();
     }
@@ -45,8 +46,7 @@ public class ProgressionState extends PersistentState {
         ProgressionState state =
                 new ProgressionState();
 
-        int count =
-                nbt.getInt("Count");
+        int count = nbt.getInt("Count");
 
         for (int i = 0; i < count; i++) {
 
@@ -74,8 +74,9 @@ public class ProgressionState extends PersistentState {
                         data.getInt("Level")
                 );
 
+                // Reads the old numeric Int tag as well.
                 progression.setExperience(
-                        data.getInt("Experience")
+                        data.getLong("Experience")
                 );
 
                 progression.setPowerLevel(
@@ -110,8 +111,7 @@ public class ProgressionState extends PersistentState {
         for (Map.Entry<UUID, PlayerProgression> entry :
                 progressions.entrySet()) {
 
-            UUID uuid =
-                    entry.getKey();
+            UUID uuid = entry.getKey();
 
             PlayerProgression progression =
                     entry.getValue();
@@ -129,7 +129,7 @@ public class ProgressionState extends PersistentState {
                     progression.getLevel()
             );
 
-            data.putInt(
+            data.putLong(
                     "Experience",
                     progression.getExperience()
             );

@@ -2,6 +2,7 @@ package org.marj4n.smooth_progression.progression;
 
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.PersistentStateManager;
+import net.minecraft.world.World;
 
 public final class ProgressionManager {
 
@@ -16,7 +17,8 @@ public final class ProgressionManager {
     ) {
 
         PersistentStateManager manager =
-                player.getServerWorld()
+                player.getServer()
+                        .getWorld(World.OVERWORLD)
                         .getPersistentStateManager();
 
         return manager.getOrCreate(
@@ -30,8 +32,7 @@ public final class ProgressionManager {
             ServerPlayerEntity player
     ) {
 
-        ProgressionState state =
-                getState(player);
+        ProgressionState state = getState(player);
 
         return state.getOrCreate(player);
     }
@@ -40,19 +41,13 @@ public final class ProgressionManager {
             ServerPlayerEntity player
     ) {
 
-        ProgressionState state =
-                getState(player);
-
-        state.markProgressionDirty();
+        getState(player).markProgressionDirty();
     }
 
     public static void remove(
             ServerPlayerEntity player
     ) {
 
-        ProgressionState state =
-                getState(player);
-
-        state.remove(player);
+        getState(player).remove(player);
     }
 }
