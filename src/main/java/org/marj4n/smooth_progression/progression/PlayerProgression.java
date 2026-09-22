@@ -3,12 +3,12 @@ package org.marj4n.smooth_progression.progression;
 public class PlayerProgression {
 
     private int level;
-    private int experience;
+    private long experience;
     private int powerLevel;
 
     public PlayerProgression() {
         this.level = 1;
-        this.experience = 0;
+        this.experience = 0L;
         this.powerLevel = 0;
     }
 
@@ -20,12 +20,12 @@ public class PlayerProgression {
         this.level = Math.max(1, level);
     }
 
-    public int getExperience() {
+    public long getExperience() {
         return experience;
     }
 
-    public void setExperience(int experience) {
-        this.experience = Math.max(0, experience);
+    public void setExperience(long experience) {
+        this.experience = Math.max(0L, experience);
     }
 
     public int getPowerLevel() {

@@ -2,6 +2,7 @@ package org.marj4n.smooth_progression.combat;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
+
 import org.marj4n.smooth_progression.progression.ExperienceApi;
 import org.marj4n.smooth_progression.progression.XpSource;
 
@@ -19,9 +20,9 @@ public final class MobExperience {
             return;
         }
 
-        int xp = calculateExperience(entity);
+        long xp = calculateExperience(entity);
 
-        if (xp <= 0) {
+        if (xp <= 0L) {
             return;
         }
 
@@ -32,16 +33,19 @@ public final class MobExperience {
         );
     }
 
-    private static int calculateExperience(
+    private static long calculateExperience(
             LivingEntity entity
     ) {
 
-        float maxHealth =
-                entity.getMaxHealth();
+        double maxHealth = entity.getMaxHealth();
 
-        int xp =
-                Math.round(maxHealth / 2.0F);
+        if (!Double.isFinite(maxHealth)
+                || maxHealth <= 0.0D) {
+            return 0L;
+        }
 
-        return Math.max(1, xp);
+        long xp = Math.round(maxHealth / 2.0D);
+
+        return Math.max(1L, xp);
     }
 }

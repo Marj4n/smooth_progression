@@ -9,15 +9,11 @@ public final class ExperienceApi {
 
     public static void addExperience(
             ServerPlayerEntity player,
-            int amount,
+            long amount,
             XpSource source
     ) {
 
-        if (player == null) {
-            return;
-        }
-
-        if (amount <= 0) {
+        if (player == null || amount <= 0L) {
             return;
         }
 
