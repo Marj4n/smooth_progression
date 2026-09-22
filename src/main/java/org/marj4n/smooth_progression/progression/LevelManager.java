@@ -102,7 +102,7 @@ public final class LevelManager {
     ) {
 
         progression.setExperience(newExperience);
-        state.markProgressionDirty();
+        ProgressionManager.markDirty(player);
 
         for (int iteration = 0;
              iteration < MAX_LEVELS_PER_EVENT;
@@ -120,7 +120,7 @@ public final class LevelManager {
 
                 // Clear leftover XP once progression is complete.
                 progression.setExperience(0L);
-                state.markProgressionDirty();
+                ProgressionManager.markDirty(player);
 
                 // Intentionally silent.
                 return;
@@ -237,7 +237,7 @@ public final class LevelManager {
 
             progression.setLevel(currentLevel + 1);
 
-            state.markProgressionDirty();
+            ProgressionManager.markDirty(player);
 
             sendLevelUp(
                     player,
@@ -271,7 +271,7 @@ public final class LevelManager {
             if (!PufferfishSkillsIntegration.addSkillPoints(player, currentLevel,
                     PufferfishSkillsIntegration.POINTS_PER_LEVEL)) break;
             progression.setLevel(currentLevel + 1);
-            state.markProgressionDirty();
+            ProgressionManager.markDirty(player);
             gained++;
         }
         return gained;
@@ -378,7 +378,7 @@ public final class LevelManager {
             progression.setLevel(currentLevel + 1);
 
             // Preserve pending XP instead of silently deleting it.
-            state.markProgressionDirty();
+            ProgressionManager.markDirty(player);
 
             gained++;
 
