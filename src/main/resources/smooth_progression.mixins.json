@@ -4,7 +4,10 @@
   "package": "org.marj4n.smooth_progression.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MobSpawnerLogicMixin"
+    "MobSpawnerLogicMixin",
+    "LivingEntityDamageMixin",
+    "LivingEntityLootMixin",
+    "EnchantmentHelperMixin"
   ],
   "injectors": {
     "defaultRequire": 1
