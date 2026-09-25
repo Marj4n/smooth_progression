@@ -13,6 +13,9 @@ import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.config.BossScalingConfig;
 import org.marj4n.smooth_progression.boss.BossProgression;
 import org.marj4n.smooth_progression.progression.ExperienceApi;
+import org.marj4n.smooth_progression.progression.ExperienceManager;
+import org.marj4n.smooth_progression.progression.ProgressionManager;
+import org.marj4n.smooth_progression.config.ProgressionXpConfig;
 import org.marj4n.smooth_progression.progression.XpSource;
 
 import java.util.UUID;
@@ -67,27 +70,49 @@ public final class MobExperience {
             return;
         }
 
-        long experience =
-                calculateExperience(victim);
+        BossScalingConfig.BossLevel boss = BossProgression.getBoss(victim);
 
-        if (experience <= 0L) {
+        if (boss != null) {
+            awardBossExperience(player, victim, boss);
             return;
         }
 
-        // Spawner mobs receive 50% XP.
-        if (MobXpOrigin.isSpawner(victim)) {
+        long experience = calculateExperience(victim);
+        if (experience <= 0L) return;
 
-            experience = Math.max(
-                    1L,
-                    experience / 2L
-            );
+        // Spawner farming remains possible, but is intentionally inefficient.
+        if (MobXpOrigin.isSpawner(victim)) {
+            double multiplier = ProgressionXpConfig.get().combat.spawner_multiplier;
+            experience = Math.max(1L, Math.round(experience * multiplier));
         }
 
-        ExperienceApi.addExperience(
-                player,
-                experience,
-                XpSource.MOB_KILL
-        );
+        ExperienceApi.addExperience(player, experience, XpSource.MOB_KILL);
+    }
+
+    private static void awardBossExperience(ServerPlayerEntity player, LivingEntity victim, BossScalingConfig.BossLevel boss) {
+        ProgressionXpConfig.Combat c = ProgressionXpConfig.get().combat;
+        int playerLevel = ProgressionManager.get(player).getLevel();
+        int bossLevel = Math.max(1, boss.min_level);
+
+        double relevance;
+        int difference = bossLevel - playerLevel;
+        if (Math.abs(difference) <= c.boss_level_match_range) relevance = c.boss_level_match_multiplier;
+        else if (difference > c.boss_level_match_range) relevance = c.boss_above_level_multiplier;
+        else if (playerLevel - bossLevel >= c.boss_far_below_threshold) relevance = c.boss_far_below_level_multiplier;
+        else relevance = c.boss_below_level_multiplier;
+
+        long levelCost = ExperienceManager.getRequiredExperience(bossLevel);
+        double reward = levelCost * c.boss_reward_fraction * relevance * boss.xp_multiplier;
+
+        String bossId = Registries.ENTITY_TYPE.getId(victim.getType()).toString();
+        String firstKillTag = "smoothprogression.boss_killed." + bossId.replace(':', '.');
+        boolean firstKill = !player.getCommandTags().contains(firstKillTag);
+        reward *= firstKill ? c.boss_first_kill_multiplier : c.boss_repeat_multiplier;
+        if (firstKill) player.addCommandTag(firstKillTag);
+
+        if (!Double.isFinite(reward) || reward <= 0D) return;
+        long experience = reward >= Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(1L, Math.round(reward));
+        ExperienceApi.addExperience(player, experience, XpSource.BOSS_KILL);
     }
 
     // =========================================================
