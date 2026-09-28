@@ -3,7 +3,7 @@
   "id": "smooth_progression",
   "version": "${version}",
   "name": "Smooth Progression",
-  "description": "for my modpack Smooth Odyssey",
+  "description": "Level, XP, world progression, and skill-point progression integrated with Smooth Classes for Minecraft 1.20.1.",
   "authors": [],
   "contact": {},
   "license": "All-Rights-Reserved",
@@ -30,6 +30,8 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": "${minecraft_version}",
+    "puffish_skills": "*",
+    "smooth_classes": "*"
   }
 }

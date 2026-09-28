@@ -21,20 +21,22 @@ public final class PufferfishSkillsIntegration {
             new Identifier("smoothprogression", "level_up");
 
     private static final Identifier TREE_ID =
-            new Identifier("simplyskills", "tree");
+            new Identifier("smooth_classes", "tree");
 
     private static final Identifier ASCENDANCY_ID =
-            new Identifier("simplyskills", "ascendancy");
+            new Identifier("smooth_classes", "ascendancy");
 
     private static final List<Identifier> CLASS_IDS = List.of(
-            new Identifier("simplyskills", "berserker"),
-            new Identifier("simplyskills", "cleric"),
-            new Identifier("simplyskills", "crusader"),
-            new Identifier("simplyskills", "necromancer"),
-            new Identifier("simplyskills", "ranger"),
-            new Identifier("simplyskills", "rogue"),
-            new Identifier("simplyskills", "spellblade"),
-            new Identifier("simplyskills", "wizard")
+            new Identifier("smooth_classes", "avenger"),
+            new Identifier("smooth_classes", "foreigner"),
+            new Identifier("smooth_classes", "caster"),
+            new Identifier("smooth_classes", "berserker"),
+            new Identifier("smooth_classes", "archer"),
+            new Identifier("smooth_classes", "assassin"),
+            new Identifier("smooth_classes", "saber"),
+            new Identifier("smooth_classes", "ruler"),
+            new Identifier("smooth_classes", "rider"),
+            new Identifier("smooth_classes", "lancer")
     );
 
     public enum Stage {
@@ -524,7 +526,7 @@ public final class PufferfishSkillsIntegration {
                 .filter(category ->
                         category.getId()
                                 .getNamespace()
-                                .equals("simplyskills")
+                                .equals("smooth_classes")
                 )
                 .mapToLong(category ->
                         category.getPoints(

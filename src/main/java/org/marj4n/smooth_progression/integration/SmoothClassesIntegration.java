@@ -9,16 +9,16 @@ import net.puffish.skillsmod.api.SkillsAPI;
 
 import java.util.List;
 
-public final class SimplySkillsIntegration {
+public final class SmoothClassesIntegration {
 
     private static final Identifier TREE_ID =
-            new Identifier("simplyskills", "tree");
+            new Identifier("smooth_classes", "tree");
 
-    private SimplySkillsIntegration() {
+    private SmoothClassesIntegration() {
     }
 
     // =========================================================
-    // RESET ALL SIMPLY SKILLS PROGRESSION
+    // RESET ALL SMOOTH CLASSES PROGRESSION
     // =========================================================
 
     public static void resetSkillsAndPoints(
@@ -34,7 +34,7 @@ public final class SimplySkillsIntegration {
                         .filter(category ->
                                 category.getId()
                                         .getNamespace()
-                                        .equals("simplyskills")
+                                        .equals("smooth_classes")
                         )
                         .toList();
 
@@ -72,7 +72,7 @@ public final class SimplySkillsIntegration {
     }
 
     // =========================================================
-    // DEBUG SIMPLYSKILLS CATEGORIES
+    // DEBUG SMOOTH CLASSES CATEGORIES
     // =========================================================
 
     public static void debugUnlockedCategories(
@@ -85,7 +85,7 @@ public final class SimplySkillsIntegration {
 
         player.sendMessage(
                 Text.literal(
-                        "§6=== SimplySkills Categories ==="
+                        "§6=== Smooth Classes Categories ==="
                 ),
                 false
         );
@@ -94,7 +94,7 @@ public final class SimplySkillsIntegration {
                 .filter(category ->
                         category.getId()
                                 .getNamespace()
-                                .equals("simplyskills")
+                                .equals("smooth_classes")
                 )
                 .forEach(category -> {
 
