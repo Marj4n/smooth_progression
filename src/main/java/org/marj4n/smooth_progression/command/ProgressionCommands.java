@@ -16,7 +16,7 @@ import org.marj4n.smooth_progression.progression.LevelManager;
 import org.marj4n.smooth_progression.progression.PlayerProgression;
 import org.marj4n.smooth_progression.progression.ProgressionManager;
 
-import org.marj4n.smooth_progression.integration.SimplySkillsIntegration;
+import org.marj4n.smooth_progression.integration.SmoothClassesIntegration;
 
 public final class ProgressionCommands {
 
@@ -219,7 +219,7 @@ public final class ProgressionCommands {
                                     + "§e/sp level add <amount>\n"
                                     + "§e/sp level reset\n"
                                     + "§e/sp debuglevel add <amount> §7- Test levels (bypass spend gate)\n"
-                                    + "§e/sp debugskills §7- Debug skill categories"
+                                    + "§e/sp debugskills §7- Debug Smooth Classes categories"
                     ),
                     false
             );
@@ -239,7 +239,7 @@ public final class ProgressionCommands {
         ServerPlayerEntity player =
                 source.getPlayerOrThrow();
 
-        SimplySkillsIntegration.debugUnlockedCategories(player);
+        SmoothClassesIntegration.debugUnlockedCategories(player);
 
         return 1;
     }
@@ -521,8 +521,8 @@ public final class ProgressionCommands {
         PlayerProgression progression =
                 ProgressionManager.get(player);
 
-        // Reset SimplySkills first.
-        SimplySkillsIntegration.resetSkillsAndPoints(player);
+        // Reset Smooth Classes first.
+        SmoothClassesIntegration.resetSkillsAndPoints(player);
 
         // Reset Smooth Progression.
         progression.setLevel(1);
@@ -537,7 +537,7 @@ public final class ProgressionCommands {
                                 + "§eLevel: §f1\n"
                                 + "§eXP: §f0\n"
                                 + "§ePower Level: §f0\n"
-                                + "§7SimplySkills skills and points reset attempted."
+                                + "§7Smooth Classes skills and points reset."
                 ),
                 false
         );
