@@ -292,7 +292,26 @@ public final class PufferfishSkillsIntegration {
 
         Optional<Category> tree = getGeneralTree();
 
-        if (tree.isEmpty() || !tree.get().isUnlocked(player)) {
+        if (tree.isEmpty()) {
+            return new Destination(
+                    Stage.UNAVAILABLE,
+                    Optional.empty()
+            );
+        }
+
+        // The general tree is the mandatory starting category.
+        // Old worlds or test saves can retain it as locked even though
+        // Smooth Classes declares it unlocked by default. Self-heal that
+        // stale per-player state instead of blocking level progression.
+        Category generalTree = tree.get();
+
+        if (!generalTree.isUnlocked(player)) {
+            generalTree.unlock(player);
+        }
+
+        // If another mod/data issue prevents the unlock from taking effect,
+        // fail safely rather than awarding points into an unavailable tree.
+        if (!generalTree.isUnlocked(player)) {
             return new Destination(
                     Stage.UNAVAILABLE,
                     Optional.empty()
