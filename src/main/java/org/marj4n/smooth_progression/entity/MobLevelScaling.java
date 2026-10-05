@@ -136,7 +136,7 @@ public final class MobLevelScaling {
         MobScalingConfig.Override override =
                 config.entities.overrides.get(id);
 
-        int level = readLevel(mob);
+        int level = getLevel(mob);
 
         boolean firstAssignment = level < 1;
 
@@ -391,7 +391,8 @@ public final class MobLevelScaling {
     // READ LEVEL
     // =========================================================
 
-    private static int readLevel(
+    /** Returns the persisted mob level, or zero if no valid level is assigned. */
+    public static int getLevel(
             Entity entity
     ) {
 

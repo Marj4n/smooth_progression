@@ -56,6 +56,10 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+    // Optional Jade integration: compile against its API without bundling it
+    // or making Jade a required runtime dependency.
+    modCompileOnly "maven.modrinth:jade:${project.jade_version}"
+
     // Puffish Skills is the API used by Smooth Progression.
     modImplementation "maven.modrinth:hqQqvaa4:cYeLbNNg"
 

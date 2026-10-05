@@ -24,6 +24,7 @@ public final class ClientProgression implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        PlayerNameplatesClient.register();
 
         ClientPlayNetworking.registerGlobalReceiver(
                 ProgressionSync.CHANNEL,

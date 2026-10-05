@@ -31,6 +31,7 @@ public final class ProgressionSync {
     /** Call on the server thread after a progression change. Sends at end of tick. */
     public static void request(ServerPlayerEntity player) {
         if (player != null) DIRTY.add(player.getUuid());
+        PlayerNameplateSync.request(player);
     }
 
     public static void register() {
