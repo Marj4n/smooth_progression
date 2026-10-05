@@ -4,7 +4,7 @@ import net.minecraft.util.Formatting;
 
 /** Presentation metadata only; class unlocks remain owned by Smooth Classes. */
 public enum PlayerTitle {
-    AVANGER("avenger", "Avanger", Formatting.DARK_PURPLE),
+    AVANGER("avenger", "Avenger", Formatting.DARK_PURPLE),
     FOREIGNER("foreigner", "Foreigner", Formatting.LIGHT_PURPLE),
     CASTER("caster", "Caster", Formatting.AQUA),
     BERSERKER("berserker", "Berserker", Formatting.RED),
