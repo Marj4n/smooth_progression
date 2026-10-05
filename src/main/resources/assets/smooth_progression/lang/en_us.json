@@ -1,0 +1,15 @@
+{
+  "smooth_progression.jade.level": "Level: %s",
+  "config.jade.plugin_smooth_progression.mob_level": "Mob Level",
+  "smooth_progression.nameplate.level": "Lv. %s",
+  "smooth_progression.title.avenger": "Lord of the Fallen",
+  "smooth_progression.title.foreigner": "Riftblade Wanderer",
+  "smooth_progression.title.caster": "Archmage of the Elements",
+  "smooth_progression.title.berserker": "Wrath Incarnate",
+  "smooth_progression.title.archer": "Sovereign of the Arsenal",
+  "smooth_progression.title.assassin": "Phantom of the Night",
+  "smooth_progression.title.saber": "Radiant Oathkeeper",
+  "smooth_progression.title.ruler": "Divine Arbiter",
+  "smooth_progression.title.rider": "Skybound Sovereign",
+  "smooth_progression.title.lancer": "Heaven Piercer"
+}

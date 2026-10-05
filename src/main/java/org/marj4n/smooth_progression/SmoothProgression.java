@@ -10,6 +10,7 @@ import org.marj4n.smooth_progression.config.BossScalingConfig;
 import org.marj4n.smooth_progression.config.ProgressionXpConfig;
 import org.marj4n.smooth_progression.activity.ActivityExperience;
 import org.marj4n.smooth_progression.network.ProgressionSync;
+import org.marj4n.smooth_progression.network.PlayerNameplateSync;
 import org.marj4n.smooth_progression.entity.MobLevelScaling;
 import org.marj4n.smooth_progression.boss.BossProgression;
 
@@ -28,6 +29,7 @@ public class SmoothProgression implements ModInitializer {
 
         ProgressionCommands.register();
         ProgressionSync.register();
+        PlayerNameplateSync.register();
         ProgressionXpConfig.load();
         MobScalingConfig.load();
         BossScalingConfig.load();

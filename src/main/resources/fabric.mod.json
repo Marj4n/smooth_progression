@@ -10,6 +10,9 @@
   "icon": "assets/smooth_progression/icon.png",
   "environment": "*",
   "entrypoints": {
+    "jade": [
+      "org.marj4n.smooth_progression.integration.jade.SmoothProgressionJadePlugin"
+    ],
     "fabric-datagen": [
       "org.marj4n.smooth_progression.client.SmoothProgressionDataGenerator"
     ],
