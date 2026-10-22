@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "Smooth Progression",
   "description": "Level, XP, world progression, and skill-point progression integrated with Smooth Classes for Minecraft 1.20.1.",
-  "authors": [],
+  "authors": ["Marj4n"],
   "contact": {},
   "license": "All-Rights-Reserved",
   "icon": "assets/smooth_progression/icon.png",
