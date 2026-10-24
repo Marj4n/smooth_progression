@@ -12,6 +12,7 @@ import net.minecraft.util.math.BlockPos;
 
 import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.config.BossScalingConfig;
+import org.marj4n.smooth_progression.integration.AvengerBoundWitherCompat;
 
 import java.util.List;
 import java.util.UUID;
@@ -97,6 +98,12 @@ public final class MobLevelScaling {
         // Universal damage scaling is handled elsewhere.
         removeLegacyDamageModifier(mob);
 
+        // Vanilla treats ALL Withers as bosses. An Avenger-bound Wither is a
+        // persistent minion instead, including after a world reload. Repair
+        // any boss HP saved by older versions BEFORE applying normal scaling.
+        boolean boundWither = AvengerBoundWitherCompat.isBoundWither(mob);
+        if (boundWither) AvengerBoundWitherCompat.removeStaleBossHealth(mob);
+
         MobScalingConfig config = MobScalingConfig.get();
 
         if (!config.enabled) {
@@ -111,8 +118,9 @@ public final class MobLevelScaling {
             return;
         }
 
-        // Dedicated boss scaling is not implemented yet.
-        if (BossScalingConfig.get().contains(id)) {
+        // Bosses use the fixed boss curve EXCEPT bound Avenger Withers, which
+        // must use the owner's saved RPG level as an ordinary hostile summon.
+        if (BossScalingConfig.get().contains(id) && !boundWither) {
             return;
         }
 
@@ -137,6 +145,10 @@ public final class MobLevelScaling {
                 config.entities.overrides.get(id);
 
         int level = getLevel(mob);
+
+        // The owner (Smooth Classes) is authoritative. An offline owner's
+        // bound Wither must NEVER be assigned a random area level on reload.
+        if (boundWither && level < 1) return;
 
         boolean firstAssignment = level < 1;
 

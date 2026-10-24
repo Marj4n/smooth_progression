@@ -7,6 +7,7 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.registry.Registries;
+import org.marj4n.smooth_progression.integration.AvengerBoundWitherCompat;
 import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.config.BossScalingConfig;
 import java.util.UUID;
@@ -21,12 +22,20 @@ public final class BossProgression {
 
     public static BossScalingConfig.BossLevel getBoss(Entity entity) {
         MobScalingConfig config = MobScalingConfig.get();
-        if (!config.enabled || !BossScalingConfig.get().enabled || !(entity instanceof LivingEntity)) return null;
+        if (!config.enabled || !BossScalingConfig.get().enabled || !(entity instanceof LivingEntity)
+                || AvengerBoundWitherCompat.isBoundWither(entity)) return null;
         String id = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
         return BossScalingConfig.get().levels.get(id);
     }
 
+    /** Refresh after a summon is explicitly unbound into an ordinary boss again. */
+    public static void refreshEntity(Entity entity) { apply(entity); }
+
     private static void apply(Entity entity) {
+        if (AvengerBoundWitherCompat.isBoundWither(entity)) {
+            AvengerBoundWitherCompat.removeStaleBossHealth(entity);
+            return;
+        }
         BossScalingConfig.BossLevel boss = getBoss(entity);
         if (boss == null) return;
         LivingEntity living = (LivingEntity) entity;

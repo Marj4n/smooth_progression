@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.config.BossScalingConfig;
 import org.marj4n.smooth_progression.boss.BossProgression;
+import org.marj4n.smooth_progression.integration.AvengerBoundWitherCompat;
 import org.marj4n.smooth_progression.progression.ExperienceApi;
 import org.marj4n.smooth_progression.progression.ExperienceManager;
 import org.marj4n.smooth_progression.progression.ProgressionManager;
@@ -221,7 +222,8 @@ public final class MobExperience {
 
         // Bosses retain normal HP-based XP,
         // but receive no mob-level XP multiplier.
-        if (BossScalingConfig.get().contains(entityId)) {
+        if (BossScalingConfig.get().contains(entityId)
+                && !AvengerBoundWitherCompat.isBoundWither(entity)) {
             return false;
         }
 
