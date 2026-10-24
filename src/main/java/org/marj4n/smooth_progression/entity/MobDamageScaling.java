@@ -10,6 +10,7 @@ import net.minecraft.registry.Registries;
 import org.marj4n.smooth_progression.config.MobScalingConfig;
 import org.marj4n.smooth_progression.config.BossScalingConfig;
 import org.marj4n.smooth_progression.boss.BossGateManager;
+import org.marj4n.smooth_progression.integration.AvengerBoundWitherCompat;
 
 public final class MobDamageScaling {
 
@@ -72,7 +73,7 @@ public final class MobDamageScaling {
         }
 
         // Boss progression is handled separately in the future.
-        if (BossScalingConfig.get().contains(id)) {
+        if (BossScalingConfig.get().contains(id) && !AvengerBoundWitherCompat.isBoundWither(mob)) {
             return amount;
         }
 
