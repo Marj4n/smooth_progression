@@ -1,0 +1,44 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+[[mods]]
+modId="smooth_progression"
+version="${version}"
+displayName="Smooth Progression"
+authors="Marj4n"
+description='''Level, XP, world progression, and skill-point progression integrated with Smooth Classes for Minecraft 1.20.1.'''
+
+[[dependencies.smooth_progression]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.smooth_progression]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.smooth_progression]]
+modId="fabric_api"
+mandatory=true
+versionRange="[0.92.6,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.smooth_progression]]
+modId="puffish_skills"
+mandatory=true
+versionRange="[0.19.1,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.smooth_progression]]
+modId="smooth_classes"
+mandatory=true
+versionRange="[1.0.5,)"
+ordering="AFTER"
+side="BOTH"

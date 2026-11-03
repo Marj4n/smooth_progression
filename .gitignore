@@ -1,4 +1,15 @@
 .gradle/
-build/
+/build/
 .idea/
 run/
+# Local multi-loader build output
+multiloader-build.log
+*.log
+/.gradle/
+/.idea/
+/out/
+/run/
+/runs/
+/common/build/
+/fabric/build/
+/forge/build/

@@ -1,126 +1,63 @@
 plugins {
-    id 'fabric-loom' version '1.14.3'
-    id 'maven-publish'
+    id 'base'
+    id 'dev.architectury.loom' version '1.10.455' apply false
 }
-
-version = project.mod_version
-group = project.maven_group
-
-base {
-    archivesName = project.archives_base_name
+allprojects {
+    group = rootProject.maven_group
+    version = rootProject.mod_version
 }
-
-loom {
-    splitEnvironmentSourceSets()
-
-    mods {
-        "smooth_progression" {
-            sourceSet sourceSets.main
-            sourceSet sourceSets.client
-        }
-    }
-
-    runs {
-        client {
-            ideConfigGenerated = true
-            property "fabric.developmentEnvironment", "true"
-        }
-    }
+project(':forge') { ext['loom.platform'] = 'forge' }
+tasks.register('collectJars', Sync) {
+    dependsOn ':fabric:remapJar', ':forge:remapJar'
+    from(project(':fabric').tasks.named('remapJar').flatMap { it.archiveFile })
+    from(project(':forge').tasks.named('remapJar').flatMap { it.archiveFile })
+    into(layout.buildDirectory.dir('libs'))
 }
-
-fabricApi {
-    configureDataGeneration {
-        client = true
-    }
+tasks.named('build') {
+    dependsOn ':fabric:build', ':forge:build', 'collectJars', ':common:validateSharedResources'
 }
+tasks.named('clean') { dependsOn ':fabric:clean', ':forge:clean', ':common:clean' }
 
-repositories {
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = "Modrinth"
-                url = "https://api.modrinth.com/maven"
+// Packaging is part of the build, so a successful compile cannot hide missing data.
+tasks.register('verifyLoaderJars') {
+    dependsOn ':fabric:remapJar', ':forge:remapJar', ':common:validateSharedResources'
+    doLast {
+        ['fabric', 'forge'].each { loader ->
+            def artifact = project(":" + loader).tasks.named('remapJar').get().archiveFile.get().asFile
+            new java.util.jar.JarFile(artifact).withCloseable { jar ->
+                def names = jar.entries().collect { it.name }
+                def ownMetadata = loader == 'fabric' ? 'fabric.mod.json' : 'META-INF/mods.toml'
+                def otherMetadata = loader == 'fabric' ? 'META-INF/mods.toml' : 'fabric.mod.json'
+                if (!names.contains(ownMetadata) || names.contains(otherMetadata)) {
+                    throw new GradleException('Loader metadata is incorrect in ' + artifact.name)
+                }
+                if (loader == 'forge' && !names.contains('pack.mcmeta')) {
+                    throw new GradleException('Missing Forge resource pack metadata in ' + artifact.name)
+                }
+                def metadata = jar.getInputStream(jar.getJarEntry(ownMetadata)).getText('UTF-8')
+                if (metadata.contains('$' + '{version}')) throw new GradleException('Unexpanded version in ' + artifact.name)
+                ['assets', 'data'].each { prefix ->
+                    fileTree('common/src/main/resources/' + prefix).files.each { original ->
+                        def relative = file('common/src/main/resources').toPath().relativize(original.toPath()).toString().replace('\\', '/')
+                        def entry = jar.getJarEntry(relative)
+                        if (entry == null || !java.util.Arrays.equals(original.bytes, jar.getInputStream(entry).bytes)) {
+                            throw new GradleException('Missing or changed shared resource in ' + artifact.name + ': ' + relative)
+                        }
+                    }
+                }
+                names.findAll { it.endsWith('.mixins.json') }.each { name ->
+                    def config = new groovy.json.JsonSlurper().parse(jar.getInputStream(jar.getJarEntry(name)))
+                    if (!names.contains(config.refmap)) throw new GradleException('Missing mixin refmap: ' + name)
+                    def packagePath = config.package.replace('.', '/') + '/'
+                    ((config.mixins ?: []) + (config.client ?: []) + (config.server ?: [])).each { mixin ->
+                        if (!names.contains(packagePath + mixin.replace('.', '/') + '.class')) {
+                            throw new GradleException('Missing mixin class: ' + mixin)
+                        }
+                    }
+                }
+                logger.lifecycle('Verified ' + loader + ' metadata, mixins and shared resources: ' + artifact.name)
             }
         }
-
-        filter {
-            includeGroup "maven.modrinth"
-        }
     }
 }
-
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
-    // Optional Jade integration: compile against its API without bundling it
-    // or making Jade a required runtime dependency.
-    modCompileOnly "maven.modrinth:jade:${project.jade_version}"
-
-    // Puffish Skills is the API used by Smooth Progression.
-    modImplementation "maven.modrinth:hqQqvaa4:cYeLbNNg"
-
-    // Smooth Classes is a required runtime dependency in fabric.mod.json.
-    // It does not need to be a compile dependency because this project talks
-    // to its skill tree through the Puffish Skills API. Add the released
-    // Smooth Classes jar as a dev/runtime dependency when using runClient.
-
-    // Other dependencies
-    modImplementation "maven.modrinth:8ooWzSQP:G74msHHs"
-    modImplementation "maven.modrinth:XvoWJaA2:Fh2MJAAe"
-    modImplementation "maven.modrinth:9s6osm5g:2xQdCMyG"
-    modImplementation "maven.modrinth:FCFcFw09:GoArx0qR"
-    modImplementation "maven.modrinth:gedNE4y2:yDqYTUaf"
-
-    // TinyConfig bundled inside Spell Power
-    implementation files("libs/TinyConfig-2.3.2.jar")
-}
-
-processResources {
-    inputs.property "version", project.version
-    inputs.property "minecraft_version", project.minecraft_version
-    inputs.property "loader_version", project.loader_version
-    filteringCharset "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "minecraft_version": project.minecraft_version,
-                "loader_version": project.loader_version
-    }
-}
-
-def targetJavaVersion = 17
-tasks.withType(JavaCompile).configureEach {
-    it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release.set(targetJavaVersion)
-    }
-}
-
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
-    withSourcesJar()
-}
-
-jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}" }
-    }
-}
-
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
-            from components.java
-        }
-    }
-    repositories {
-    }
-}
+tasks.named('collectJars') { dependsOn 'verifyLoaderJars' }

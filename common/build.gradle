@@ -1,0 +1,7 @@
+plugins { id 'base' }
+tasks.register('validateSharedResources') {
+    doLast {
+        def metadata = file('src/main/resources/smooth_progression.mixins.json')
+        if (!metadata.isFile()) throw new GradleException('Shared mixin metadata is missing')
+    }
+}

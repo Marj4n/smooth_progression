@@ -1,0 +1,58 @@
+plugins {
+    id 'dev.architectury.loom'
+    id 'maven-publish'
+}
+base {
+    archivesName = rootProject.archives_base_name
+}
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.architectury.dev/' }
+    maven { url = 'https://maven.su5ed.dev/releases' }
+    maven { url = 'https://www.cursemaven.com'; content { includeGroup 'curse.maven' } }
+    maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
+    mavenCentral()
+}
+repositories.exclusiveContent {
+    forRepository { repositories.maven { name = 'ModrinthExclusive'; url = 'https://api.modrinth.com/maven' } }
+    filter { includeGroup 'maven.modrinth' }
+}
+repositories.exclusiveContent {
+    forRepository { repositories.maven { name = 'CurseMavenExclusive'; url = 'https://www.cursemaven.com' } }
+    filter { includeGroup 'curse.maven' }
+}
+repositories.exclusiveContent {
+    forRepository { repositories.maven { name = 'SinytraExclusive'; url = 'https://maven.su5ed.dev/releases' } }
+    filter { includeGroupByRegex 'dev[.]su5ed[.]sinytra.*' }
+}
+sourceSets.main.java.srcDirs += [rootProject.file('common/src/main/java'), rootProject.file('common/src/client/java')]
+sourceSets.main.resources.srcDirs += [rootProject.file('common/src/main/resources'), rootProject.file('common/src/client/resources')]
+dependencies {
+    minecraft 'com.mojang:minecraft:1.20.1'
+    mappings 'net.fabricmc:yarn:1.20.1+build.10:v2'
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
+    modImplementation 'maven.modrinth:hqQqvaa4:g3pzFlwX'
+    modCompileOnly 'maven.modrinth:jade:11.13.2+fabric'
+}
+loom {
+    mixin { defaultRefmapName = "smooth_progression.refmap.json" }
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 17 }
+tasks.named('processResources') {
+    dependsOn ':common:validateSharedResources'
+    inputs.property 'version', project.version
+    filesMatching(['fabric.mod.json', 'META-INF/mods.toml']) {
+        expand version: project.version, minecraft_version: rootProject.minecraft_version, loader_version: rootProject.loader_version
+    }
+}
+tasks.named('jar') {
+    archiveClassifier = 'dev-fabric'
+    from(rootProject.file('LICENSE.txt'))
+}
+tasks.named('remapJar') { archiveClassifier = 'fabric' }
+tasks.named('sourcesJar') { archiveClassifier = 'fabric-sources' }

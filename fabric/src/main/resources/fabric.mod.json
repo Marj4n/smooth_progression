@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "smooth_progression",
+  "version": "${version}",
+  "name": "Smooth Progression",
+  "description": "Level, XP, world progression, and skill-point progression integrated with Smooth Classes for Minecraft 1.20.1.",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/smooth_progression/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "jade": [
+      "org.marj4n.smooth_progression.integration.jade.SmoothProgressionJadePlugin"
+    ],
+    "fabric-datagen": [
+      "org.marj4n.smooth_progression.client.SmoothProgressionDataGenerator"
+    ],
+    "client": [
+      "org.marj4n.smooth_progression.platform.fabric.FabricClientEntrypoint"
+    ],
+    "main": [
+      "org.marj4n.smooth_progression.platform.fabric.FabricEntrypoint"
+    ]
+  },
+  "mixins": [
+    "smooth_progression.mixins.json",
+    {
+      "config": "smooth_progression.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}",
+    "puffish_skills": "*",
+    "smooth_classes": "*"
+  }
+}
