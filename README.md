@@ -21,3 +21,7 @@ Both-loader output is collected in `build/libs/`; each module also has its own o
 ## License
 
 By Marj4n. See [LICENSE.txt](LICENSE.txt).
+
+## Reuse permissions
+
+Reusing or modifying Marj4n-owned source code or assets requires prior written permission. Contact Marj4n through [nivekts.vercel.app](https://nivekts.vercel.app/) with the intended use. See [LICENSE.txt](LICENSE.txt) for gameplay permissions and exceptions. Third-party licenses, existing grants and GitHub platform rights remain applicable.
